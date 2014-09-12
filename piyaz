@@ -1,0 +1,98 @@
+#!/usr/bin/env bash
+
+SOCKS_PORT="forward-socks4a	/	127.0.0.1:9050	."	#Port to import privoxy config
+TOR_EXISTS=$(command -v tor)	# tor installed or not.
+PRIVOXY_EXISTS=$(command -v privoxy)	# privoxy installed or not.
+TOR_RUNNING=$(ps -e |grep tor | awk '{print $4}')	# tor running or not.
+PRIVOXY_RUNNING=$(ps -e |grep privoxy | awk '{print $4}')	# privoxy running or not.
+PRIVOXY_CONFIG_FILE="/etc/privoxy/config"	# privoxy config file path
+PRIVOXY_SOCKS_PORT_EXISTS=$(tail -n 1 /etc/privoxy/config)	#	hold end of privoxy config file.
+
+echo	"What's your distribution based on?"
+read	GET_DISTRO_BASE	#	hold distribution base
+DISTRO_BASE=$(echo "$GET_DISTRO_BASE" | tr '[:upper:]' '[:lower:]')		#Ignorecase $GET_DISTRO_BASE
+
+#	If $DISTRO_BASE is debian or ubuntu
+if [[ "$DISTRO_BASE" == "debian" || "$DISTRO_BASE" == "ubuntu" ]]; then
+	#	If $TOR_EXISTS and $PRIVOXY_EXISTS exists
+	if [[ "$TOR_EXISTS" && "$PRIVOXY_EXISTS" ]]; then		
+		#	If $PRIVOXY_SOCKS_PORT_EXISTS has exists in end of $PRIVOXY_CONFIG_FILE
+		if  [ "$PRIVOXY_SOCKS_PORT_EXISTS" ]; then
+			# If tor and privoxy is running,
+			if  [[ "$TOR_RUNNING" == "tor" || "$PRIVOXY_RUNNING" == "privoxy" ]]; then
+				sudo /etc/init.d/tor force-reload
+				sudo /etc/init.d/privoxy force-reload
+			else
+				sudo /etc/init.d/tor start
+				sudo /etc/init.d/privoxy start
+			fi
+		#	If $PRIVOXY_SOCKS_PORT_EXISTS not exists in end of $PRIVOXY_CONFIG_FILE
+		else
+			#	If $PRIVOXY_CONFIG_FILE have write permission
+			if [ -w "$PRIVOXY_CONFIG_FILE" ]; then
+				echo "$SOCKS_PORT" | sudo tee -a "$PRIVOXY_CONFIG_FILE" > /dev/null
+			#	If $PRIVOXY_CONFIG_FILE does'nt have write permission access
+			else
+				sudo sh -c "chmod 665 $PRIVOXY_CONFIG_FILE"
+				echo "$SOCKS_PORT" | sudo tee -a "$PRIVOXY_CONFIG_FILE" > /dev/null
+			fi
+		fi
+	#	If only tor not installed
+	elif  [ ! "$TOR_EXISTS" ]; then
+		echo "tor not installed,"
+		echo "please update repositories and install tor via:"
+		echo "sudo apt-get install tor tor-geoipdb"
+	#	If only privoxy not installed
+	elif  [ ! "$PRIVOXY_EXISTS" ]; then
+		echo "privoxy not installed,"
+		echo "please update repositories and install privoxy via:"
+		echo "sudo apt-get install privoxy"
+	#	If tor and privoxy not installed
+	elif [[ ! "$PRIVOXY_EXISTS" && ! "$TOR_EXISTS" ]]; then
+		echo "please update repositories then install tor and dependences via:"
+		echo "sudo apt-get install tor tor-geoipdb privoxy"
+	fi
+
+#	If $DISTRO_BASE is fedora or redhat
+elif [[ "$DISTRO_BASE" == "fedora" || "$DISTRO_BASE" == "redhat" ]]; then
+	#	If $TOR_EXISTS and $PRIVOXY_EXISTS exists
+	if [[ "$TOR_EXISTS" && "$PRIVOXY_EXISTS" ]]; then		
+		#	If $PRIVOXY_SOCKS_PORT_EXISTS has exists in end of $PRIVOXY_CONFIG_FILE
+		if  [ "$PRIVOXY_SOCKS_PORT_EXISTS" ]; then
+			# If tor and privoxy is running,
+			if  [[ "$TOR_RUNNING" == "tor" || "$PRIVOXY_RUNNING" == "privoxy" ]]; then
+				sudo service tor force-reload
+				sudo service privoxy force-reload
+			else
+				sudo service tor start
+				sudo service privoxy start
+			fi
+		#	If $PRIVOXY_SOCKS_PORT_EXISTS not exists in end of $PRIVOXY_CONFIG_FILE
+		else
+			#	If $PRIVOXY_CONFIG_FILE have write permission
+			if [ -w "$PRIVOXY_CONFIG_FILE" ]; then
+				echo "$SOCKS_PORT" | sudo tee -a "$PRIVOXY_CONFIG_FILE" > /dev/null
+			#	If $PRIVOXY_CONFIG_FILE does'nt have write permission access
+			else
+				sudo sh -c "chmod 665 $PRIVOXY_CONFIG_FILE"
+				echo "$SOCKS_PORT" | sudo tee -a "$PRIVOXY_CONFIG_FILE" > /dev/null
+			fi
+		fi
+	#	If only tor not installed
+	elif  [ ! "$TOR_EXISTS" ]; then
+		echo "tor not installed,"
+		echo "please update repositories and install tor via:"
+		echo "sudo yum install tor"
+	#	If only privoxy not installed
+	elif  [ ! "$PRIVOXY_EXISTS" ]; then
+		echo "privoxy not installed,"
+		echo "please update repositories and install privoxy via:"
+		echo "sudo yum install privoxy"
+	#	If tor and privoxy not installed
+	elif [[ ! "$PRIVOXY_EXISTS" && ! "$TOR_EXISTS" ]]; then
+		echo "please update repositories then install tor and dependences via:"
+		echo "sudo yum install tor privoxy"
+	fi
+else
+	echo "Sorry!, The distro you're using isn't supported yet."
+fi
