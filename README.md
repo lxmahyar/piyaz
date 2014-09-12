@@ -1,4 +1,4 @@
 piyaz
 =====
 
-automatic tor and privoxy configurator
+Automatic TOR and Privoxy Configuration
